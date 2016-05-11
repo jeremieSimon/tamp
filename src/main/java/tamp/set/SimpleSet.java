@@ -1,4 +1,4 @@
-package concurrent.set;
+package tamp.set;
 
 public interface SimpleSet<T> {
 

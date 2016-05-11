@@ -5,7 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import concurrent.set.SimpleConcurrentHashSet;
+import tamp.set.SimpleConcurrentHashSet;
 
 public class SimpleConcurrentHashSetTest {
 

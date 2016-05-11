@@ -1,4 +1,4 @@
-package concurrent.set;
+package tamp.set;
 
 import java.util.Arrays;
 

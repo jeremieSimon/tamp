@@ -1,4 +1,4 @@
-package concurrent.queue;
+package tamp.queue;
 
 public class SimpleQueue<T> {
 

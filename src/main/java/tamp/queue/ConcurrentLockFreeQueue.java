@@ -1,4 +1,4 @@
-package concurrent.queue;
+package tamp.queue;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
