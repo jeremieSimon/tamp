@@ -3,7 +3,7 @@ package tamp.queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class ConcurrentLockFreeQueue<T> {
+public class ConcurrentLockFreeQueue<T> implements SimpleQueue<T> {
 
     volatile SimpleNode<T> head;
     volatile AtomicReference<SimpleNode<T>> tail;
@@ -18,6 +18,7 @@ public class ConcurrentLockFreeQueue<T> {
         size = new AtomicInteger();
     }
 
+    @Override
     public void add(T value) {
         if (size.get() == capacity) {
             throw new RuntimeException();
@@ -43,6 +44,7 @@ public class ConcurrentLockFreeQueue<T> {
 
     }
 
+    @Override
     public T get() {
         /*if (size.getAndDecrement() == 0) {
             throw new RuntimeException();
