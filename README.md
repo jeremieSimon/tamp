@@ -4,6 +4,7 @@ First using their most simple form, then making them concurrent naively, improvi
 #Non-concurrent HashSet
 - SimpleHashSet
 - CuckooHashSet
+
 #Concurrent HashSet
 - SimpleConcurrentHashSet
 - LazyResizableHashSet
