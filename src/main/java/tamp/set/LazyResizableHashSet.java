@@ -167,11 +167,10 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
         int hash = Math.abs(element.hashCode() % elements.length);
         int newHash = Math.abs(element.hashCode() % (elements.length * 2));
 
-        if (resizing.get())
+        if (resizing.get()) {
             locks[newHash % locks.length].lock();
-        else {
-            locks[hash % locks.length].lock();
         }
+        locks[hash % locks.length].lock();
     }
 
     /**
@@ -183,9 +182,9 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
         int hash = Math.abs(element.hashCode() % elements.length);
         int newHash = Math.abs(element.hashCode() % (elements.length * 2));
 
-        if (resizing.get())
+        if (resizing.get()) {
             locks[newHash % locks.length].unlock();
-        else
-            locks[hash % locks.length].unlock();
+        }
+        locks[hash % locks.length].unlock();
     }
 }
