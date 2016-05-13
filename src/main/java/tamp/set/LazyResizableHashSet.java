@@ -15,6 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * all add operations happen on the new one
  * contains and remove happen on both.
  * In the back a thread will move element bucket by bucket from the old table to the new table.
+ * The idea here is not to have some kind of stop the world when resizing.
  */
 public class LazyResizableHashSet<T> implements SimpleSet<T> {
 
