@@ -23,48 +23,54 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
     volatile List<T>[] newElements;
     AtomicBoolean resizing;
     AtomicInteger size; // current number of elements
+    final ExecutorService service;
 
     public LazyResizableHashSet(int capacity) {
         this.size = new AtomicInteger();
         this.resizing = new AtomicBoolean(false);
         this.elements = new ArrayList[capacity];
         this.locks = new Lock[capacity];
-
+        this.service = Executors.newFixedThreadPool(5);
         for (int i = 0; i < capacity; i++) {
             elements[i] = new ArrayList<T>();
             locks[i] = new ReentrantLock();
         }
     }
 
+    /**
+     * On a resize we need to check both, the old table and the new table
+     * So we need to lock both the old table and the new table.
+     */
     @Override
-    public boolean contains(T element) {
+    public boolean contains(final T element) {
         int hash = Math.abs(element.hashCode() % elements.length);
         int newHash = Math.abs(element.hashCode() % (elements.length * 2));
 
+        boolean lockBothTable = acquire(element);
         try {
-            acquire(element);
             if (!resizing.get())
                 return elements[hash].contains(element);
             return elements[hash].contains(element)
                 || newElements[newHash].contains(element);
         } finally {
-            release(element);
+            release(element, lockBothTable);
         }
     }
 
     /**
-     * On a resize only need to lock the newElements
+     * On a resize only need to add the element in the new table
+     * so on a resize we only need to lock the new table.
      */
     @Override
     public void add(T element) {
-        int hash = Math.abs(element.hashCode() % elements.length);
-        int newHash = Math.abs(element.hashCode() % (elements.length * 2));
-
         if (contains(element)) {
             return;
         }
 
-        acquire(element);
+        int hash = Math.abs(element.hashCode() % elements.length);
+        int newHash = Math.abs(element.hashCode() % (elements.length * 2));
+
+        boolean lockBothTable = acquire(element);
         try {
             if (!resizing.get()) {
                 elements[hash].add(element);
@@ -72,28 +78,41 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
                 newElements[newHash].add(element);
             }
         } finally {
-            release(element);
+            release(element, lockBothTable);
         }
 
-        if (size.getAndIncrement() > elements.length / 2) {
+        if (size.addAndGet(1) >= elements.length / 2) {
             resize(elements.length);
         }
     }
 
+    public int capacity() {
+        return elements.length;
+    }
+
+    public int size() {
+        return size.get();
+    }
+
     /**
-     * On a resize needs to lock both elements and newElements
+     * On a resize needs to potentially remove from both tables
+     * the old one and the new one
      */
     @Override
     public boolean remove(T element) {
         int hash = Math.abs(element.hashCode() % elements.length);
-        acquire(element);
+        boolean lockBothTable = acquire(element);
         try {
-            boolean isRemoved = elements[hash].remove(element);
+            boolean isRemoved = false;
+            if (lockBothTable) {
+                isRemoved = newElements[hash].remove(element);
+            }
+             isRemoved |= elements[hash].remove(element);
             if (isRemoved)
                 size.getAndDecrement();
             return isRemoved;
         } finally {
-            release(element);
+            release(element, lockBothTable);
         }
     }
 
@@ -108,31 +127,33 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
     private void resize(final int currentCapacity) {
         if (resizing.get()) // someone is already resizing
             return;
+        service.submit(resizer(currentCapacity));
+    }
 
-        ExecutorService service = Executors.newFixedThreadPool(1);
-        try {
-            service.submit(resizer(currentCapacity));
-        } finally {
-            service.shutdown();
-        }
+    @Override
+    protected void finalize() {
+        service.shutdown();
     }
 
     private Runnable resizer(final int currentCapacity) {
         return new Runnable() {
             @Override
             public void run() {
-                System.out.println("starting the resize");
 
-                //someone is already resizing or someone already just resized
-                if (!resizing.compareAndSet(false, true)
+                //someone is already resizing or a resize was initiated but another finished in the meantime
+                if (resizing.get()
                     || currentCapacity != elements.length) {
                     return;
                 }
+
                 //create the new elements table
                 int newCapacity = elements.length * 2;
-                List<T>[] newElements = new ArrayList[elements.length * 2];
+                newElements = new ArrayList[elements.length * 2];
                 for (int i = 0; i < newCapacity; i++)
                     newElements[i] = new ArrayList<T>();
+
+                if (!resizing.compareAndSet(false, true))
+                    return;
 
                 // add elements from old table to new table
                 for (int i = 0; i < elements.length; i++) {
@@ -143,14 +164,13 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
                         try {
                             newElements[hash].add(element);
                         } finally {
-                            release(element);
+                            release(element, true);
                         }
                     }
                 }
 
                 //replace old table by new table
                 //replace old size by new size
-                System.out.println("done resizing");
                 elements = newElements;
                 resizing.set(false);
                 return;
@@ -163,14 +183,16 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
      * Else, need both need a lock on the old table and the new table.
      * @param element
      */
-    private void acquire(T element) {
+    private boolean acquire(T element) {
         int hash = Math.abs(element.hashCode() % elements.length);
         int newHash = Math.abs(element.hashCode() % (elements.length * 2));
-
+        boolean lockBothTable = false;
         if (resizing.get()) {
             locks[newHash % locks.length].lock();
+            lockBothTable = true;
         }
         locks[hash % locks.length].lock();
+        return lockBothTable;
     }
 
     /**
@@ -178,11 +200,11 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
      * Else, need both need a lock on the old table and the new table.
      * @param element
      */
-    private void release(T element) {
+    private void release(T element, boolean unlockBothTable) {
         int hash = Math.abs(element.hashCode() % elements.length);
         int newHash = Math.abs(element.hashCode() % (elements.length * 2));
 
-        if (resizing.get()) {
+        if (unlockBothTable) {
             locks[newHash % locks.length].unlock();
         }
         locks[hash % locks.length].unlock();
