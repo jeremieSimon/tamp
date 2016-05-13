@@ -16,6 +16,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * contains and remove happen on both.
  * In the back a thread will move element bucket by bucket from the old table to the new table.
  * The idea here is not to have some kind of stop the world when resizing.
+ * The problem that remains is that you still the locks are not expendable.
  */
 public class LazyResizableHashSet<T> implements SimpleSet<T> {
 
@@ -26,7 +27,7 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
     AtomicInteger size; // current number of elements
     final ExecutorService service;
 
-    public LazyResizableHashSet(int capacity) {
+    public LazyResizableHashSet(final int capacity) {
         this.size = new AtomicInteger();
         this.resizing = new AtomicBoolean(false);
         this.elements = new ArrayList[capacity];
@@ -63,7 +64,7 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
      * so on a resize we only need to lock the new table.
      */
     @Override
-    public void add(T element) {
+    public void add(final T element) {
         if (contains(element)) {
             return;
         }
@@ -100,7 +101,7 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
      * the old one and the new one
      */
     @Override
-    public boolean remove(T element) {
+    public boolean remove(final T element) {
         int hash = Math.abs(element.hashCode() % elements.length);
         boolean lockBothTable = acquire(element);
         try {
@@ -184,7 +185,7 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
      * Else, need both need a lock on the old table and the new table.
      * @param element
      */
-    private boolean acquire(T element) {
+    private boolean acquire(final T element) {
         int hash = Math.abs(element.hashCode() % elements.length);
         int newHash = Math.abs(element.hashCode() % (elements.length * 2));
         boolean lockBothTable = false;
@@ -201,7 +202,7 @@ public class LazyResizableHashSet<T> implements SimpleSet<T> {
      * Else, need both need a lock on the old table and the new table.
      * @param element
      */
-    private void release(T element, boolean unlockBothTable) {
+    private void release(final T element, final boolean unlockBothTable) {
         int hash = Math.abs(element.hashCode() % elements.length);
         int newHash = Math.abs(element.hashCode() % (elements.length * 2));
 
