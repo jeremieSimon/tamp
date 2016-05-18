@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Simple bounded queue where each entry can be composed of a value and a lock.
  */
-public class ConcurrentArrayQueue<T> implements SimpleQueue<T> {
+public class ConcurrentRingBuffer<T> implements SimpleQueue<T> {
 
     private final ReentrantLock[] locks;
     private final T[] elements;
@@ -15,10 +15,10 @@ public class ConcurrentArrayQueue<T> implements SimpleQueue<T> {
     private AtomicInteger insertPos;
     private AtomicInteger numberOfElements;
 
-    public ConcurrentArrayQueue(final int capacity) {
+    public ConcurrentRingBuffer(final int capacity) {
         this.capacity = capacity;
         insertPos = new AtomicInteger(-1);
-        getPos = new AtomicInteger(-1);
+        getPos = new AtomicInteger(0);
         numberOfElements = new AtomicInteger(0);
 
         locks = new ReentrantLock[capacity];
@@ -72,12 +72,12 @@ public class ConcurrentArrayQueue<T> implements SimpleQueue<T> {
             return "";
         StringBuilder sb = new StringBuilder();
         int currGetPos = getPos.get();
-
-        while (currGetPos < currGetPos + currNumElements) {
-            sb.append(elements[currGetPos % capacity]);
-            sb.toString();
+        int end = currGetPos + currNumElements;
+        while (currGetPos < end) {
+            sb.append(elements[currGetPos % capacity] + ", ");
+            currGetPos++;
         }
-        return sb.toString();
+        return sb.substring(0, sb.length() - 2).toString();
     }
 
 }
