@@ -20,12 +20,12 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class LazyResizableHashSet<T> implements SimpleSet<T> {
 
-    final Lock[] locks;
-    volatile List<T>[] elements;
-    volatile List<T>[] newElements;
-    AtomicBoolean resizing;
-    AtomicInteger size; // current number of elements
-    final ExecutorService service;
+    private final Lock[] locks;
+    private volatile List<T>[] elements;
+    private volatile List<T>[] newElements;
+    private AtomicBoolean resizing;
+    private AtomicInteger size; // current number of elements
+    private final ExecutorService service;
 
     public LazyResizableHashSet(final int capacity) {
         this.size = new AtomicInteger();
