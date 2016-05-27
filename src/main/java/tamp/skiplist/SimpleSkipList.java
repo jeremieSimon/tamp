@@ -19,7 +19,7 @@ public class SimpleSkipList<E extends Comparable<E>> implements SkipList<E> {
 
     @Override
     public void add(final E element) {
-        int numberOfLevels = generateNumberOfLevels();
+        int level = generateNumberOfLevels();
 
         // case 1
         if (numberOfElements == 0) {
@@ -28,7 +28,7 @@ public class SimpleSkipList<E extends Comparable<E>> implements SkipList<E> {
                 succs[i] = tail;
             }
             SkipListNode<E> node = new SkipListNode<>(element, succs);
-            for (int i = 0; i < numberOfLevels + 1; i++) {
+            for (int i = 0; i < level + 1; i++) {
                 head.succs[i] = node;
             }
             numberOfElements++;
@@ -52,16 +52,30 @@ public class SimpleSkipList<E extends Comparable<E>> implements SkipList<E> {
             }
         }
         SkipListNode<E> node = new SkipListNode<>(element, succs);
-        for (int i = 0; i < numberOfLevels + 1; i++) {
+        for (int i = 0; i < level + 1; i++) {
             preds[i].succs[i] = node;
         }
         numberOfElements++;
     }
 
     @Override
-    public boolean remove(final E element) {
-        // TODO Auto-generated method stub
-        return false;
+    public void remove(final E element) {
+        SkipListNode<E>[] preds = new SkipListNode[numberOfLevel];
+        SkipListNode<E>[] succs = new SkipListNode[numberOfLevel];
+        SkipListNode<E> currNode = head;
+        for (int i = numberOfLevel - 1; i >= 0; i--) {
+            while (true) {
+                if (currNode.succs[i] == tail || currNode.succs[i].value.compareTo(element) > 0) {
+                    preds[i] = currNode;
+                    succs[i] = currNode.succs[i];
+                    break;
+                } else if (currNode.succs[i].value.compareTo(element) == 0) {
+                    currNode.succs[i] = currNode.succs[i].succs[i];
+                    break;
+                }
+                currNode = currNode.succs[i];
+            }
+        }
     }
 
     @Override
@@ -124,5 +138,19 @@ public class SimpleSkipList<E extends Comparable<E>> implements SkipList<E> {
         public String toString() {
             return value == null ? "null" : value.toString();
         }
+    }
+
+    public static void main(String[] args) {
+        SimpleSkipList<Integer> s = new SimpleSkipList<Integer>(4);
+        s.add(1);
+        s.add(2);
+        s.add(3);
+        s.add(4);
+        s.remove(3);
+        s.add(3);
+        s.add(10);
+        s.add(15);
+        s.remove(1);
+        System.out.println(s);
     }
 }
