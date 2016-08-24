@@ -6,7 +6,7 @@
   <version>0.0.1</version>
   <packaging>jar</packaging>
 
-  <name>interview</name>
+  <name>tamp</name>
   <url>http://maven.apache.org</url>
 
   <properties>
