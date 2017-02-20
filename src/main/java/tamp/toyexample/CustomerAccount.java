@@ -1,6 +1,5 @@
 package tamp.toyexample;
 
-import com.priceminister.account.*;
 import com.sun.istack.internal.Nullable;
 
 import java.util.concurrent.atomic.AtomicReference;
